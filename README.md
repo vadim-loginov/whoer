@@ -1,6 +1,6 @@
 # whoer
 
-> Test project
+> Test
 
 ## Build Setup
 
