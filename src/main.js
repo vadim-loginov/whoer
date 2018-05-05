@@ -5,9 +5,12 @@ import locale from 'element-ui/lib/locale/lang/ru-RU';
 import 'element-ui/lib/theme-chalk/index.css';
 import Vue from 'vue';
 import App from './App';
+import sse from './services/sse';
+import bus from './services/bus';
 
 Vue.config.productionTip = false;
 Vue.use(ElementUI, { locale });
+Vue.prototype.$bus = bus;
 
 /* eslint-disable no-new */
 new Vue({
@@ -15,3 +18,5 @@ new Vue({
   components: { App },
   template: '<App/>',
 });
+
+sse.start();

@@ -120,6 +120,7 @@ export default {
     };
   },
   mounted() {
+    this.$bus.$on('sse:translation', this.handleTranslationServerEvent.bind(this));
     this.loadLanguages()
       .then(this.setFirstLanguageAsCurrent)
       .then(this.loadTranslations)
@@ -158,7 +159,10 @@ export default {
       }).then(() =>
         translationsDataprovider.deleteTranslation(translation.id)
           .then(() => {
-            this.translations.splice(this.translations.indexOf(translation), 1);
+            const idx = this.translations.indexOf(translation);
+            if (idx !== -1) {
+              this.translations.splice(idx, 1);
+            }
           }),
       ).catch(() => {
         // Удаление отменено
@@ -175,11 +179,38 @@ export default {
     postNewTranslation() {
       translationsDataprovider
         .createTranslation(this.currentLanguage.code, this.newTranslation)
-        .then(({ data }) => {
-          this.translations.push(data);
+        .then((data) => {
+          if (!this.translations.find(t => t.id === data.id)) {
+            this.translations.push(data);
+          }
           this.newTranslation = getNewTranslationDataModel();
           this.newTranslationDialogVisible = false;
         });
+    },
+    handleTranslationServerEvent(serverTranslation) {
+      const translationModel = this.translations.find(
+        t => t.id === serverTranslation.id,
+      );
+      if ('deleted' in serverTranslation) {
+        deleteTranslation.call(this, translationModel);
+      } else if (translationModel === undefined) {
+        insertTranslation.call(this, serverTranslation);
+      } else {
+        // Update
+        Object.assign(translationModel, serverTranslation);
+      }
+
+      function insertTranslation(translation) {
+        if (!this.translations.find(t => t.id === translation.id)) {
+          this.translations.push(translation);
+        }
+      }
+      function deleteTranslation(translation) {
+        const idx = this.translations.indexOf(translation);
+        if (idx !== -1) {
+          this.translations.splice(idx, 1);
+        }
+      }
     },
   },
 };

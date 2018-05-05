@@ -30,23 +30,26 @@ function updateTranslation(languageCode, { id, snippet }) {
 }
 
 function createTranslation(languageCode, { name, snippet }) {
-  return http.post(
-    'translation',
-    { name, snippet },
-    {
-      withCredentials: true,
-      headers: {
-        'Accept-Language': languageCode,
+  return http
+    .post(
+      'translation',
+      { name, snippet },
+      {
+        withCredentials: true,
+        headers: {
+          'Accept-Language': languageCode,
+        },
       },
-    },
-  ).catch((error) => {
-    Message({
-      showClose: true,
-      message: 'Ошибка! Не удалось создать перевод.',
-      type: 'error',
+    )
+    .then(resp => resp.data)
+    .catch((error) => {
+      Message({
+        showClose: true,
+        message: 'Ошибка! Не удалось создать перевод.',
+        type: 'error',
+      });
+      throw error;
     });
-    throw error;
-  });
 }
 
 export default {
