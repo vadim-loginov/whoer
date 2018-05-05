@@ -23,4 +23,7 @@ export default {
   text-align: center;
   color: #2c3e50;
 }
+.mb10 {
+  margin-bottom: 10px;
+}
 </style>

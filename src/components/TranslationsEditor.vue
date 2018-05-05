@@ -1,20 +1,28 @@
 <template>
   <div class="translation-editor">
     <div class="translation-editor__header">
+
+      <!-- Buttons for languages -->
       <el-button
         v-for="lang in languageList"
-        :type="lang === currentLanguage ? 'success' : 'default'"
+        :type="lang === currentLanguage ? 'primary' : 'default'"
         :key="lang.code"
         @click="selectLanguage(lang)"
         :title="lang.name"
       >{{ lang.code }}</el-button>
+
+      <!-- Add translation -->
       <el-button
         :disabled="!currentLanguage"
         class="translation-editor__add-translation"
-        type="success"
+        type="primary"
         icon="el-icon-edit"
+        @click="newTranslationDialogVisible = true"
       >Новый перевод</el-button>
+
     </div>
+
+    <!-- Translation list -->
     <div class="translation-editor__content">
       <el-table
         v-loading="translations === null"
@@ -62,6 +70,24 @@
         </el-table-column>
       </el-table>
     </div>
+
+    <!-- Create new translation -->
+    <el-dialog
+      title="Новый перевод"
+      :visible.sync="newTranslationDialogVisible"
+      width="30%">
+      <div class="mb10">
+        <el-input v-focus placeholder="name" v-model="newTranslation.name"></el-input>
+      </div>
+      <div>
+        <el-input placeholder="snippet" v-model="newTranslation.snippet"></el-input>
+      </div>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="cancelNewTranslation()">Отмена</el-button>
+        <el-button type="primary" @click="postNewTranslation()">Создать</el-button>
+      </span>
+    </el-dialog>
+
   </div>
 </template>
 
@@ -69,11 +95,17 @@
 import languagesDataprovider from '../dataproviders/languages.dp';
 import translationsDataprovider from '../dataproviders/translations.dp';
 import dateFilter from '../filters/date.filter';
+import focusDirective from '../directives/focus.directive';
+
+const getNewTranslationDataModel = () => ({ name: null, snippet: null });
 
 export default {
   name: 'TranslationsEditor',
   filters: {
     date: dateFilter,
+  },
+  directives: {
+    focus: focusDirective,
   },
   data() {
     return {
@@ -83,6 +115,8 @@ export default {
       translations: null,
       // Current selected language. First in the list of languages by default
       currentLanguage: null,
+      newTranslationDialogVisible: false,
+      newTranslation: getNewTranslationDataModel(),
     };
   },
   mounted() {
@@ -101,7 +135,7 @@ export default {
       this.loadTranslations(this.currentLanguage);
     },
     loadLanguages() {
-      return languagesDataprovider.getLanguages().then(({ data }) => {
+      return languagesDataprovider.getLanguages().then((data) => {
         this.languageList = data;
         return data;
       });
@@ -117,16 +151,35 @@ export default {
         });
     },
     deleteTranslation(translation) {
-      this.$notify.info({
-        title: 'Удаление',
-        message: JSON.stringify(translation),
+      return this.$confirm('Это удалит переводы на всех языках. Продолжить?', 'Удаление перевода', {
+        confirmButtonText: 'Удалить',
+        cancelButtonText: 'Отмена',
+        type: 'warning',
+      }).then(() =>
+        translationsDataprovider.deleteTranslation(translation.id)
+          .then(() => {
+            this.translations.splice(this.translations.indexOf(translation), 1);
+          }),
+      ).catch(() => {
+        // Удаление отменено
       });
     },
     updateTranslation(translation) {
-      this.$notify.info({
-        title: 'Редактирование',
-        message: translation.snippet,
-      });
+      return translationsDataprovider
+        .updateTranslation(this.currentLanguage.code, translation);
+    },
+    cancelNewTranslation() {
+      this.newTranslation = getNewTranslationDataModel();
+      this.newTranslationDialogVisible = false;
+    },
+    postNewTranslation() {
+      translationsDataprovider
+        .createTranslation(this.currentLanguage.code, this.newTranslation)
+        .then(({ data }) => {
+          this.translations.push(data);
+          this.newTranslation = getNewTranslationDataModel();
+          this.newTranslationDialogVisible = false;
+        });
     },
   },
 };
